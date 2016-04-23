@@ -4,6 +4,10 @@
 	"GodepVersion": "v62",
 	"Deps": [
 		{
+			"ImportPath": "github.com/andrewstuart/gosaml2",
+			"Rev": "ad4a1cf368de5f9bd29179fd7175020682706af3"
+		},
+		{
 			"ImportPath": "github.com/andrewstuart/gosaml2-1",
 			"Rev": "42e468d83c0ef9a3d0ea56127b347804dee52e1b"
 		},
