@@ -1,0 +1,64 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: uportal
+  name: saml2-test
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: saml2-test
+        tier: frontend
+    spec:
+      containers:
+      - name: saml2-test
+        image: docker.astuart.co:5000/saml2/test:1461437613
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: keys
+          mountPath: /etc/oidc/keys
+        env:
+        - name: SP_DIR
+          value: /etc/oidc/keys
+      volumes:
+      - name: keys
+        secret:
+          secretName: saml2.enc-sign.tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: uportal
+  name: saml2-test
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: saml2-test
+    tier: frontend
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: uportal
+  name: saml2-test
+spec:
+  tls:
+  - secretName: saml2.test.astuart.co.tls
+    hosts:
+    - saml2.test.astuart.co
+  rules:
+  - host: saml2.test.astuart.co
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: saml2-test
+          servicePort: 80
