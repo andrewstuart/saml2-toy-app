@@ -5,11 +5,11 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/andrewstuart/gosaml2",
-			"Rev": "ad4a1cf368de5f9bd29179fd7175020682706af3"
+			"Rev": "a58722e7676f018511c38466d71741c42e0c13c6"
 		},
 		{
 			"ImportPath": "github.com/andrewstuart/gosaml2-1",
-			"Rev": "42e468d83c0ef9a3d0ea56127b347804dee52e1b"
+			"Rev": "075492bbc9b929f974bed5986297c86533838db7"
 		},
 		{
 			"ImportPath": "github.com/beevik/etree",
