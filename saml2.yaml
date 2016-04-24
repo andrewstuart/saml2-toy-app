@@ -13,19 +13,19 @@ spec:
     spec:
       containers:
       - name: saml2-test
-        image: docker.astuart.co:5000/saml2/test:1461437613
+        image: docker.astuart.co:5000/saml2/test:1461464992
         resources:
           requests:
             cpu: 100m
             memory: 200Mi
         ports:
         - containerPort: 8080
-        volumeMounts:
-        - name: keys
-          mountPath: /etc/oidc/keys
         env:
         - name: SP_DIR
-          value: /etc/oidc/keys
+          value: &certDir /etc/oidc/keys
+        volumeMounts:
+        - name: keys
+          mountPath: *certDir
       volumes:
       - name: keys
         secret:

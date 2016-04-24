@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -57,30 +56,12 @@ CQ1CF8ZDDJ0XV6Ab
 // LRx2jHND7RSVTetgfEEkkSzsebCxNKMdhIL62Z8VZgYUGD07EeV/3RZ0eV0q5Yf8
 // BhBA6Owk2P264O4R
 
-type dsCrt tls.Certificate
-
-func (d dsCrt) GetKeyPair() (*rsa.PrivateKey, []byte, error) {
-	pk, ok := d.PrivateKey.(*rsa.PrivateKey)
-
-	if !ok {
-		return nil, nil, fmt.Errorf("Private key was not RSA")
-	}
-
-	if len(d.Certificate) < 1 {
-		return nil, nil, fmt.Errorf("No public certificates provided")
-	}
-
-	crt := d.Certificate[0]
-
-	return pk, crt, nil
-}
-
 func main() {
 	flag.Parse()
 
 	idpURL := os.Getenv("IDP_SSO_URL")
 	if idpURL == "" {
-		idpURL = "https://idp.astuart.co/idp/profile/SAML2/POST/SSO"
+		idpURL = "https://idp.astuart.co/idp/profile/SAML2/Redirect/SSO"
 	}
 
 	spDir := os.Getenv("SP_DIR")
@@ -107,8 +88,8 @@ func main() {
 		AssertionConsumerServiceURL: "https://saml2.test.astuart.co/sso/saml2",
 		AudienceURI:                 "https://saml2.test.astuart.co/sso/saml2",
 		IDPCertificateStore:         certStore,
-		SPKeyStore:                  dsCrt(crt),
-		SignAuthnRequests:           true,
+		SPKeyStore:                  saml2.TLSCertKeyStore(crt),
+		SignAuthnRequests:           false,
 	}
 	//https://idp.astuart.co/idp/profile/SAML2/Unsolicited/SSO?providerId=http://portal.astuart.co/uPortal&target=/Login%3FcccMisCode=ZZ1
 
