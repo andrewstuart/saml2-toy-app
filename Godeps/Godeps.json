@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/andrewstuart/gosaml2-1",
-			"Rev": "075492bbc9b929f974bed5986297c86533838db7"
+			"Rev": "7e06b4af74755f63bc56fce03e94fb54f733847d"
 		},
 		{
 			"ImportPath": "github.com/beevik/etree",
@@ -21,7 +21,7 @@
 		},
 		{
 			"ImportPath": "github.com/russellhaering/goxmldsig",
-			"Rev": "a184946575a536a2368256acbed0e2829e7d0249"
+			"Rev": "f328031a3f9dc3b5c0ff8e7857cfecdcb85109b3"
 		},
 		{
 			"ImportPath": "github.com/satori/go.uuid",

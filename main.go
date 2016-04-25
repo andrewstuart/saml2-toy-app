@@ -3,9 +3,9 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -108,7 +108,7 @@ func main() {
 			glog.Error("error retrieving assertion:", err)
 			w.WriteHeader(500)
 		}
-		fmt.Fprintf(w, "%#v\n", info)
+		json.NewEncoder(w).Encode(info)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -119,8 +119,7 @@ func main() {
 		}
 
 		glog.V(3).Infof("auth URL: %s\n", authURL)
-		w.Header().Set("Location", authURL)
-		w.WriteHeader(302)
+		http.Redirect(w, r, authURL, 302)
 	})
 
 	http.ListenAndServe(":8080", nil)
