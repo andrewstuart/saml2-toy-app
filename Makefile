@@ -1,3 +1,5 @@
+.PHONY: build push deploy
+
 TAG := $(shell date +%s)
 IMG = saml2/test
 REG = docker.astuart.co:5000
@@ -7,7 +9,7 @@ FQTN = $(REG)/$(IMG):$(TAG)
 SED_FQTN = $(shell sed 's/\//\\\//g' <<<"$(FQTN)")
 
 build:
-	docker build --no-cache -t "$(FQTN)" .
+	docker build -t "$(FQTN)" .
 
 push: build
 	docker push "$(FQTN)"

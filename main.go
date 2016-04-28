@@ -88,8 +88,9 @@ func main() {
 		AssertionConsumerServiceURL: "https://saml2.test.astuart.co/sso/saml2",
 		AudienceURI:                 "https://saml2.test.astuart.co/sso/saml2",
 		IDPCertificateStore:         certStore,
-		SPKeyStore:                  saml2.TLSCertKeyStore(crt),
-		SignAuthnRequests:           false,
+		SPKeyStore:                  dsig.TLSCertKeyStore(crt),
+		SignAuthnRequests:           true,
+		SignAuthnRequestsAlgorithm:  dsig.CanonicalXML10AlgorithmId,
 	}
 	//https://idp.astuart.co/idp/profile/SAML2/Unsolicited/SSO?providerId=http://portal.astuart.co/uPortal&target=/Login%3FcccMisCode=ZZ1
 
