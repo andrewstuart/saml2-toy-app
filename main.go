@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
+	"encoding/gob"
 	"encoding/pem"
 	"flag"
 	"fmt"
@@ -12,6 +12,7 @@ import (
 
 	saml2 "github.com/andrewstuart/gosaml2-1"
 	"github.com/golang/glog"
+	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -60,8 +61,12 @@ CQ1CF8ZDDJ0XV6Ab
 
 var store = sessions.NewCookieStore([]byte("secret passphrase"))
 
+const authKey = "authn"
+
 func main() {
 	flag.Parse()
+
+	gob.Register(&saml2.AssertionInfo{})
 
 	idpURL := os.Getenv("IDP_SSO_URL")
 	if idpURL == "" {
@@ -99,7 +104,11 @@ func main() {
 	//https://idp.astuart.co/idp/profile/SAML2/Unsolicited/SSO?providerId=http://portal.astuart.co/uPortal&target=/Login%3FcccMisCode=ZZ1
 
 	http.HandleFunc("/sso/saml2", func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
+		sess, err := store.Get(r, "saml")
+		if err != nil {
+			glog.Error("store error")
+		}
+		err = r.ParseForm()
 
 		if err != nil {
 			glog.Error("error parsing form", err)
@@ -113,13 +122,21 @@ func main() {
 			glog.Error("error retrieving assertion:", err)
 			w.WriteHeader(500)
 		}
-		json.NewEncoder(w).Encode(info)
 
-		sess, _ := store.Get(r, "saml")
+		sess.Values[authKey] = info
+		err = sess.Save(r, w)
+		if err != nil {
+			glog.Error("Error saving session", err)
+		}
 
-		sess.Values["authn"] = info
+		url := r.FormValue("RelayState")
+		glog.Info("URL: ", url)
 
-		sess.Save(r, w)
+		if url == "" {
+			url = "/"
+		}
+
+		http.Redirect(w, r, url, 302)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -130,15 +147,15 @@ func main() {
 			return
 		}
 
-		authn, ok := sess.Values["authn"]
+		authn, ok := sess.Values[authKey]
 
 		//If no session
-		if !ok {
+		if !ok || authn == nil {
 			if err != nil {
 				glog.V(3).Info(err)
 			}
 
-			authURL, err := sp.BuildAuthURL("")
+			authURL, err := sp.BuildAuthURL("/")
 			if err != nil {
 				glog.Error("Error building Auth URL", err)
 				return
@@ -146,11 +163,17 @@ func main() {
 
 			glog.V(3).Infof("auth URL: %s\n", authURL)
 			http.Redirect(w, r, authURL, 302)
+			return
 		}
+		fmt.Printf("authn = %+v\n", authn)
 
-		info := authn.(saml2.AssertionInfo)
-		fmt.Fprintf(w, "<html><head><title>Hey %s</title></head><body>%#v</body></html>", "Authenticated", info.Values)
+		info, ok := authn.(*saml2.AssertionInfo)
+		if !ok {
+			glog.Error("No assertion")
+			return
+		}
+		fmt.Fprintf(w, "<html><head><title>Hey %s</title></head><body><h1>Hello %s</h1></body></html>", info.Values["urn:oid:2.5.4.42"], info.Values["urn:oid:2.5.4.42"])
 	})
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", context.ClearHandler(http.DefaultServeMux))
 }
