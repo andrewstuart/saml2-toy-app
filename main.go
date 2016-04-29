@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
 	saml2 "github.com/andrewstuart/gosaml2-1"
 	"github.com/golang/glog"
+	"github.com/gorilla/sessions"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
@@ -55,6 +57,8 @@ CQ1CF8ZDDJ0XV6Ab
 // kEfMv//2Kh735TytX0bJsPmmCLlI9kLcrBNKgHGPNB7oeQNGnYOu+ALxSIugZ7MW
 // LRx2jHND7RSVTetgfEEkkSzsebCxNKMdhIL62Z8VZgYUGD07EeV/3RZ0eV0q5Yf8
 // BhBA6Owk2P264O4R
+
+var store = sessions.NewCookieStore([]byte("secret passphrase"))
 
 func main() {
 	flag.Parse()
@@ -110,17 +114,42 @@ func main() {
 			w.WriteHeader(500)
 		}
 		json.NewEncoder(w).Encode(info)
+
+		sess, _ := store.Get(r, "saml")
+
+		sess.Values["authn"] = info
+
+		sess.Save(r, w)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		authURL, err := sp.BuildAuthURL("")
+		sess, err := store.Get(r, "saml")
 		if err != nil {
-			glog.Error("Error building Auth URL", err)
+			glog.Error("Error getting session", err)
+			w.WriteHeader(500)
 			return
 		}
 
-		glog.V(3).Infof("auth URL: %s\n", authURL)
-		http.Redirect(w, r, authURL, 302)
+		authn, ok := sess.Values["authn"]
+
+		//If no session
+		if !ok {
+			if err != nil {
+				glog.V(3).Info(err)
+			}
+
+			authURL, err := sp.BuildAuthURL("")
+			if err != nil {
+				glog.Error("Error building Auth URL", err)
+				return
+			}
+
+			glog.V(3).Infof("auth URL: %s\n", authURL)
+			http.Redirect(w, r, authURL, 302)
+		}
+
+		info := authn.(saml2.AssertionInfo)
+		fmt.Fprintf(w, "<html><head><title>Hey %s</title></head><body>%#v</body></html>", "Authenticated", info.Values)
 	})
 
 	http.ListenAndServe(":8080", nil)
