@@ -4,12 +4,8 @@
 	"GodepVersion": "v62",
 	"Deps": [
 		{
-			"ImportPath": "github.com/andrewstuart/gosaml2",
-			"Rev": "a58722e7676f018511c38466d71741c42e0c13c6"
-		},
-		{
 			"ImportPath": "github.com/andrewstuart/gosaml2-1",
-			"Rev": "d1e9da17c3504e3507181dd058edbc61417e411b"
+			"Rev": "bed1e904ecb37513b32d78f566bef8e1e5b2e457"
 		},
 		{
 			"ImportPath": "github.com/beevik/etree",
