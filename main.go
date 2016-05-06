@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"os"
 
-	saml2 "github.com/andrewstuart/gosaml2-1"
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
+	saml2 "github.com/russellhaering/gosaml2"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
