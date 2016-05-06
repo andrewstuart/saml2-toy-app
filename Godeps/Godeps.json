@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/andrewstuart/gosaml2-1",
-			"Rev": "bed1e904ecb37513b32d78f566bef8e1e5b2e457"
+			"Rev": "8d0e23b1831dc93c1313f50dd90874a733321298"
 		},
 		{
 			"ImportPath": "github.com/beevik/etree",

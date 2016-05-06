@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: saml2-test
-        image: docker.astuart.co:5000/saml2/test:1462075119
+        image: docker.astuart.co:5000/saml2/test:1462298202
         resources:
           requests:
             cpu: 100m

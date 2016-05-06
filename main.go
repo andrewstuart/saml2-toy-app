@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 
@@ -66,6 +67,11 @@ const authKey = "authn"
 func main() {
 	flag.Parse()
 
+	tmpl, err := template.New("frontPage").Parse(fp)
+	if err != nil {
+		glog.Fatal("Template error", err)
+	}
+
 	gob.Register(&saml2.AssertionInfo{})
 
 	idpURL := os.Getenv("IDP_SSO_URL")
@@ -124,6 +130,7 @@ func main() {
 		}
 
 		sess.Values[authKey] = info
+		sess.Values["visits"] = 0
 		err = sess.Save(r, w)
 		if err != nil {
 			glog.Error("Error saving session", err)
@@ -167,13 +174,42 @@ func main() {
 		}
 		fmt.Printf("authn = %+v\n", authn)
 
+		if r.URL.Path == "/" {
+			sess.Values["visits"] = sess.Values["visits"].(int) + 1
+			sess.Save(r, w)
+		}
+
 		info, ok := authn.(*saml2.AssertionInfo)
 		if !ok {
 			glog.Error("No assertion")
 			return
 		}
-		fmt.Fprintf(w, "<html><head><title>Hey %s</title></head><body><h1>Hello %s</h1></body></html>", info.Values["urn:oid:2.5.4.42"], info.Values["urn:oid:2.5.4.42"])
+
+		m := make(map[string]interface{})
+
+		m["name"] = info.Values["urn:oid:2.5.4.42"]
+		m["userInfo"] = info
+		m["visits"] = sess.Values["visits"]
+
+		err = tmpl.Execute(w, m)
+		if err != nil {
+			glog.Error(err)
+		}
 	})
 
 	http.ListenAndServe(":8080", context.ClearHandler(http.DefaultServeMux))
 }
+
+const fp = `
+<html>
+	<head>
+		<title>
+			Hello {{ .name }}
+		</title>
+	</head>
+	<body>
+		<h1>Hello there, {{ .name }}</h1>
+		<div>So glad to see you! You've been here {{ .visits }} times.</div>
+	</body>
+</html>
+`
