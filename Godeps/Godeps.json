@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/andrewstuart/saml2-toy-app",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v63",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/beevik/etree",
@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/golang/glog",
-			"Rev": "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+			"Rev": "44145f04b68cf362d9c4df2182967c2275eaefed"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -27,11 +27,11 @@
 		},
 		{
 			"ImportPath": "github.com/russellhaering/gosaml2",
-			"Rev": "63d5aaccdf9cfb8c68219a5528c8bc349d1d25cf"
+			"Rev": "b1e25ef08401fdf9edd7cd517653ab8b2b443204"
 		},
 		{
 			"ImportPath": "github.com/russellhaering/goxmldsig",
-			"Rev": "d076871b03ccda9725e5e4a95fdc1a43a47de4b2"
+			"Rev": "081141f942ee6d763d834f2e2bdc660013b2b1f4"
 		},
 		{
 			"ImportPath": "github.com/satori/go.uuid",

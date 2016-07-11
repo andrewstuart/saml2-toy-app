@@ -7,17 +7,30 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
       labels:
         app: saml2-test
         tier: frontend
     spec:
       containers:
       - name: saml2-test
-        image: docker.astuart.co:5000/saml2/test:1462298202
+        image: docker.astuart.co:5000/saml2/test:1468261521
         resources:
-          requests:
+          requests: &r
             cpu: 100m
-            memory: 200Mi
+            memory: 256Mi
+          # limits: *r
+        command:
+          - "go-wrapper"
+          - "run"
+          - "-v=3"
+        livenessProbe: &r
+          httpGet:
+            path: /.status
+            port: 8080
+        readinessProbe: *r
         ports:
         - containerPort: 8080
         env:
@@ -50,10 +63,6 @@ metadata:
   namespace: uportal
   name: saml2-test
 spec:
-  tls:
-  - secretName: saml2.test.astuart.co.tls
-    hosts:
-    - saml2.test.astuart.co
   rules:
   - host: saml2.test.astuart.co
     http:

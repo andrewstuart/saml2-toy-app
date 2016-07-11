@@ -4,16 +4,21 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
+	"encoding/json"
 	"encoding/pem"
 	"flag"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
+
+	_ "net/http/pprof"
 
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
+	"github.com/prometheus/client_golang/prometheus"
 	saml2 "github.com/russellhaering/gosaml2"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -41,30 +46,35 @@ CQ1CF8ZDDJ0XV6Ab
 -----END CERTIFICATE-----
 `
 
-// MIIDODCCAiCgAwIBAgIUDPz+OwougAXSuQmKDyAEL46KlPgwDQYJKoZIhvcNAQEL
-// BQAwHTEbMBkGA1UEAwwSY29sbGVnZS5jY2N0Y2EuZWR1MB4XDTE1MDYwNDIyMTA0
-// NFoXDTM1MDYwNDIyMTA0NFowHTEbMBkGA1UEAwwSY29sbGVnZS5jY2N0Y2EuZWR1
-// MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApa0K3OtkHwOnBKSJ7PxT
-// 7zry+p8kpu20d+whJs9mHW8w+DikLQ2orLPDZA34Xor0QdR6Y6+gqezIJqqpvuaj
-// YTneQQtXD3neCGD9pPemyF4efEnl21YHryt6Juy6VXIcB6ytHGhmaWg41btdxweD
-// li0b6M7Z6KAW5FjJUoqA+GqFY8rvdm0HZQN+ko4KRK7zTft6ZaPOSbQd7vMtU8bj
-// Msh2XGLWx9G10jvCOFDUbsCNQ3xeFkV30rlUgjb6p2eRUSDWcVPs2Q/FG3t8TVfJ
-// dDtRYps7QW0GDaCPM5hYnlSm+gXwkS8V0j8bGPjv7TfxxK3VMx6okIVsKga7swuZ
-// 4QIDAQABo3AwbjAdBgNVHQ4EFgQUT56D4cLSoNxs17FBY+evwXvL2jowTQYDVR0R
-// BEYwRIISY29sbGVnZS5jY2N0Y2EuZWR1hi5odHRwczovL2NvbGxlZ2UuY2NjdGNh
-// LmVkdTo4NDQzL2lkcC9zaGliYm9sZXRoMA0GCSqGSIb3DQEBCwUAA4IBAQBiG0Nw
-// KxslU74tcgjK8CBVahTs5s9Nh2s/En9lP6iWqS2wOHotZ19qqp+AJoIG0pJJpQ6o
-// fRSHdWD2uHmF0F7Uzu1XBxxbV3oG8DmbhzUw2TAOsn0Czt8V30Tfn9U+auNW2XSb
-// z27FACHplll7/T+pycCW6vUcw+boDJIG92TxqIMzlBQOzDGGOTGf/OaKXLb48rWT
-// kEfMv//2Kh735TytX0bJsPmmCLlI9kLcrBNKgHGPNB7oeQNGnYOu+ALxSIugZ7MW
-// LRx2jHND7RSVTetgfEEkkSzsebCxNKMdhIL62Z8VZgYUGD07EeV/3RZ0eV0q5Yf8
-// BhBA6Owk2P264O4R
+var (
+	store = sessions.NewCookieStore([]byte("secret passphrase"))
 
-var store = sessions.NewCookieStore([]byte("secret passphrase"))
+	redirects = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "redirects",
+		Help: "Number of redirects sent",
+	})
+
+	saml2Logins = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "saml_logins",
+		Help: "Number of logins processed via saml2",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(redirects)
+	prometheus.MustRegister(saml2Logins)
+
+	go func() {
+		log.Println(http.ListenAndServe(":6060", nil))
+	}()
+
+}
 
 const authKey = "authn"
 
 func main() {
+	glog.Info("Starting")
+
 	flag.Parse()
 
 	tmpl, err := template.New("frontPage").Parse(fp)
@@ -86,6 +96,8 @@ func main() {
 	if err != nil {
 		glog.Fatal(err)
 	}
+
+	glog.Info("Loaded keys")
 
 	block, _ := pem.Decode([]byte(idpCert))
 	idpCert, err := x509.ParseCertificate(block.Bytes)
@@ -109,7 +121,9 @@ func main() {
 	}
 	//https://idp.astuart.co/idp/profile/SAML2/Unsolicited/SSO?providerId=http://portal.astuart.co/uPortal&target=/Login%3FcccMisCode=ZZ1
 
-	http.HandleFunc("/sso/saml2", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/sso/saml2", func(w http.ResponseWriter, r *http.Request) {
 		sess, err := store.Get(r, "saml")
 		if err != nil {
 			glog.Error("store error")
@@ -129,7 +143,7 @@ func main() {
 			w.WriteHeader(500)
 		}
 
-		sess.Values[authKey] = info
+		sess.Values[authKey] = *info
 		sess.Values["visits"] = 0
 		err = sess.Save(r, w)
 		if err != nil {
@@ -143,10 +157,17 @@ func main() {
 			url = "/"
 		}
 
+		saml2Logins.Inc()
+
 		http.Redirect(w, r, url, 302)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/.status", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Success")
+	})
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
 		sess, err := store.Get(r, "saml")
 		if err != nil {
 			glog.Error("Error getting session", err)
@@ -172,7 +193,6 @@ func main() {
 			http.Redirect(w, r, authURL, 302)
 			return
 		}
-		fmt.Printf("authn = %+v\n", authn)
 
 		if r.URL.Path == "/" {
 			sess.Values["visits"] = sess.Values["visits"].(int) + 1
@@ -187,9 +207,16 @@ func main() {
 
 		m := make(map[string]interface{})
 
-		m["name"] = info.Values["urn:oid:2.5.4.42"]
+		m["name"] = info.Values.Get("urn:oid:2.5.4.42")
 		m["userInfo"] = info
 		m["visits"] = sess.Values["visits"]
+
+		bs, err := json.MarshalIndent(info, "", "  ")
+		if err != nil {
+			glog.Error(err)
+		}
+
+		m["json"] = string(bs)
 
 		err = tmpl.Execute(w, m)
 		if err != nil {
@@ -197,7 +224,11 @@ func main() {
 		}
 	})
 
-	http.ListenAndServe(":8080", context.ClearHandler(http.DefaultServeMux))
+	glog.Info("Listening")
+
+	mux.Handle("/metrics", prometheus.Handler())
+
+	glog.Fatal(http.ListenAndServe(":8080", prometheus.InstrumentHandler("mux", context.ClearHandler(mux))))
 }
 
 const fp = `
@@ -210,6 +241,15 @@ const fp = `
 	<body>
 		<h1>Hello there, {{ .name }}</h1>
 		<div>So glad to see you! You've been here {{ .visits }} times.</div>
+		{{ range $i, $e := .userInfo.Values }}
+		<div>
+		{{ $e.FriendlyName }}:
+		<ul>
+		{{ range $in, $v := $e.Values }}<li>{{ $v }}</li>
+		{{- end }}
+		</ul>
+		</div>
+		{{ end }}
 	</body>
 </html>
 `
