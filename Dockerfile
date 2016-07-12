@@ -1,5 +1,6 @@
-FROM golang:onbuild
-
+FROM golang
+MAINTAINER Andrew Stuart <andrew.stuart2@gmail.com>
+ENTRYPOINT /saml2-toy-app
 EXPOSE 8080
 
-MAINTAINER Andrew Stuart <andrew.stuart2@gmail.com>
+ADD saml2-toy-app /

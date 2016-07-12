@@ -4,7 +4,7 @@ metadata:
   namespace: uportal
   name: saml2-test
 spec:
-  replicas: 1
+  replicas: 5
   template:
     metadata:
       annotations:
@@ -16,15 +16,13 @@ spec:
     spec:
       containers:
       - name: saml2-test
-        image: docker.astuart.co:5000/saml2/test:1468261521
+        image: docker.astuart.co:5000/saml2/test:1468367529
         resources:
           requests: &r
             cpu: 100m
             memory: 256Mi
           # limits: *r
-        command:
-          - "go-wrapper"
-          - "run"
+        args:
           - "-v=3"
         livenessProbe: &r
           httpGet:

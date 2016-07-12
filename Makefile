@@ -9,6 +9,7 @@ FQTN = $(REG)/$(IMG):$(TAG)
 SED_FQTN = $(shell sed 's/\//\\\//g' <<<"$(FQTN)")
 
 build:
+	go build
 	docker build -t "$(FQTN)" .
 
 push: build

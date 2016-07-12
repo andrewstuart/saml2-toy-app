@@ -166,6 +166,20 @@ func main() {
 		fmt.Fprintf(w, "Success")
 	})
 
+	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		s, err := store.Get(r, "saml")
+		if err != nil {
+			glog.Error("Error getting session", err)
+			http.Error(w, "Error", 500)
+		}
+
+		s.Values[authKey] = nil
+		if err := s.Save(r, w); err != nil {
+			glog.Error("Error clearing session", err)
+		}
+		http.Redirect(w, r, "/", http.StatusFound)
+	})
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
 		sess, err := store.Get(r, "saml")
@@ -239,11 +253,11 @@ const fp = `
 		</title>
 	</head>
 	<body>
-		<h1>Hello there, {{ .name }}</h1>
+		<h1>Hello there, {{ .name }} <a href="/logout">Logout</a></h1>
 		<div>So glad to see you! You've been here {{ .visits }} times.</div>
 		{{ range $i, $e := .userInfo.Values }}
 		<div>
-		{{ $e.FriendlyName }}:
+		{{ $e.FriendlyName }} ({{ $e.Name }}):
 		<ul>
 		{{ range $in, $v := $e.Values }}<li>{{ $v }}</li>
 		{{- end }}
